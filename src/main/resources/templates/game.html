@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${puzzle.title}">Nonogram</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f0f4f8; text-align: center; }
+
+        header { background: #2c3e50; color: white; padding: 16px; margin-bottom: 20px; }
+        header a { color: #aad4f5; text-decoration: none; }
+        header h1 { margin-top: 8px; font-size: 1.6rem; }
+        header p  { margin-top: 6px; opacity: 0.85; }
+
+        /* Responsive grid container */
+        .grid-container {
+            overflow-x: auto;
+            margin: 20px auto;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+        }
+
+        table.nonogram { 
+            border-collapse: collapse; 
+            margin: 0 auto;
+            min-width: min-content;
+        }
+
+        td.corner { 
+            background: #f0f4f8; 
+            border: none; 
+            min-width: 40px; 
+        }
+
+        td.col-clue {
+            text-align: center;
+            vertical-align: bottom;
+            padding: 6px 2px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #2c3e50;
+            background: #dce8f5;
+            border: 1px solid #aac;
+        }
+        
+        /* Dynamic cell sizing based on grid size */
+        td.col-clue div { 
+            line-height: 1.6; 
+            white-space: nowrap;
+        }
+
+        td.row-clue {
+            text-align: right;
+            vertical-align: middle;
+            padding: 4px 10px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #2c3e50;
+            background: #dce8f5;
+            border: 1px solid #aac;
+            white-space: nowrap;
+        }
+
+        td.cell {
+            background: white;
+            border: 1px solid #aaa;
+            cursor: pointer;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 1rem;
+            transition: background 0.1s;
+        }
+        
+        /* Responsive cell sizes */
+        table[data-size="5"] td.cell { width: 40px; height: 40px; }
+        table[data-size="10"] td.cell { width: 35px; height: 35px; }
+        table[data-size="15"] td.cell { width: 30px; height: 30px; }
+        
+        /* Adjust font sizes for larger grids */
+        table[data-size="10"] td.cell { font-size: 0.9rem; }
+        table[data-size="15"] td.cell { font-size: 0.8rem; }
+        
+        @media (max-width: 768px) {
+            table[data-size="5"] td.cell { width: 35px; height: 35px; }
+            table[data-size="10"] td.cell { width: 25px; height: 25px; }
+            table[data-size="15"] td.cell { width: 20px; height: 20px; }
+            table[data-size="15"] td.cell { font-size: 0.7rem; }
+        }
+
+        td.cell:hover  { background: #d0e8ff; }
+        td.cell.filled { background: #2c3e50; color: white; }
+        td.cell.marked { background: white; color: #c0392b; font-weight: bold; }
+        td.cell.correct { background: #27ae60 !important; color: white; }
+        td.cell.wrong   { background: #e74c3c !important; }
+        td.cell.locked  { cursor: not-allowed; }
+
+        .mode-toggle { margin: 16px; }
+        .mode-toggle button {
+            padding: 8px 20px; margin: 4px;
+            border: 2px solid #2c3e50; border-radius: 6px;
+            cursor: pointer; font-size: 0.95rem; background: white;
+        }
+        .mode-toggle button.active { background: #2c3e50; color: white; }
+
+        .controls { margin: 16px; }
+        .btn {
+            padding: 10px 24px; margin: 6px;
+            background: #2c3e50; color: white;
+            border: none; border-radius: 8px;
+            font-size: 1rem; cursor: pointer;
+        }
+        .btn:hover { background: #1a252f; }
+        .btn.secondary { background: #7f8c8d; }
+        .btn.success { background: #27ae60; }
+        .btn.success:hover { background: #229954; }
+
+        #message {
+            font-size: 1.2rem; font-weight: bold;
+            margin: 16px; min-height: 30px;
+        }
+
+        .next-level-container {
+            margin: 20px auto;
+            text-align: center;
+        }
+        
+        @keyframes confetti {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); background: rgba(39, 174, 96, 0.1); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <a th:href="@{/}">← Back to Menu</a>
+    <h1 th:text="${puzzle.title}">Puzzle</h1>
+    <p>
+        <span th:text="${puzzle.niveau}"></span>
+        &nbsp;|&nbsp;
+        <span th:text="${puzzle.gridSize} + ' x ' + ${puzzle.gridSize}"></span>
+    </p>
+</header>
+
+<main>
+
+    <div class="mode-toggle">
+        <button id="btnFill" class="active">■ Fill</button>
+        <button id="btnMark">✕ Mark</button>
+    </div>
+
+    <div class="grid-container">
+        <div id="grid-wrapper"></div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" id="checkBtn">✅ Check</button>
+        <button class="btn secondary" id="clearBtn">🗑️ Clear</button>
+    </div>
+
+    <div id="message"></div>
+
+    <!-- Next Level Container -->
+    <div class="next-level-container" id="nextLevelContainer" style="display: none;">
+        <a th:if="${hasNextLevel}" 
+           th:href="@{/play/{id}(id=${nextLevelId})}" 
+           class="btn success" 
+           id="nextLevelBtn">
+            🎯 Next Level → Level <span th:text="${nextLevelId}"></span>
+        </a>
+       
+    </div>
+
+</main>
+
+<script th:inline="javascript">
+    // Get data from server
+    const puzzleJson = /*[[${puzzle}]]*/ null;
+    const hasNextLevel = /*[[${hasNextLevel}]]*/ false;
+    const nextLevelId = /*[[${nextLevelId}]]*/ null;
+    
+    if (!puzzleJson) {
+        document.getElementById('grid-wrapper').innerHTML = '<p style="color: red;">Error: No puzzle data available</p>';
+    } else {
+        // Parse the puzzle data
+        const solution = puzzleJson.solutionJson || '[]';
+        const rowClues = puzzleJson.rowCluesJson || '[]';
+        const colClues = puzzleJson.colCluesJson || '[]';
+        const size = puzzleJson.gridSize || 5;
+        
+        // Parse JSON strings into real arrays
+        const sol = JSON.parse(solution);
+        const rowC = JSON.parse(rowClues);
+        const colC = JSON.parse(colClues);
+        
+        // Flatten solution to 1D for easy comparison
+        const solFlat = sol.flat();
+        
+        // User state: 0=empty 1=filled 2=marked
+        const userGrid = Array(size * size).fill(0);
+        let mode = 'fill';
+        let isSolved = false;
+        
+        // Build the HTML table dynamically
+        const wrapper = document.getElementById('grid-wrapper');
+        const table = document.createElement('table');
+        table.className = 'nonogram';
+        table.setAttribute('data-size', size); // Add size attribute for CSS
+        
+        // Column clues row
+        const headRow = document.createElement('tr');
+        
+        // Empty corner
+        const corner = document.createElement('td');
+        corner.className = 'corner';
+        headRow.appendChild(corner);
+        
+        // One td per column - find max clue length for better display
+        let maxColClues = 0;
+        colC.forEach(clue => {
+            if (Array.isArray(clue) && clue.length > maxColClues) {
+                maxColClues = clue.length;
+            }
+        });
+        
+        colC.forEach(clue => {
+            const td = document.createElement('td');
+            td.className = 'col-clue';
+            if (Array.isArray(clue) && clue.length > 0) {
+                clue.forEach(num => {
+                    const div = document.createElement('div');
+                    div.textContent = num;
+                    td.appendChild(div);
+                });
+            } else {
+                const div = document.createElement('div');
+                div.textContent = '0';
+                td.appendChild(div);
+            }
+            headRow.appendChild(td);
+        });
+        table.appendChild(headRow);
+        
+        // Game rows
+        for (let r = 0; r < size; r++) {
+            const tr = document.createElement('tr');
+            
+            // Row clue
+            const clueCell = document.createElement('td');
+            clueCell.className = 'row-clue';
+            if (rowC[r] && Array.isArray(rowC[r]) && rowC[r].length > 0) {
+                clueCell.textContent = rowC[r].join(' ');
+            } else {
+                clueCell.textContent = '0';
+            }
+            tr.appendChild(clueCell);
+            
+            // Grid cells
+            for (let c = 0; c < size; c++) {
+                const td = document.createElement('td');
+                td.className = 'cell';
+                td.setAttribute('data-row', r);
+                td.setAttribute('data-col', c);
+                tr.appendChild(td);
+            }
+            table.appendChild(tr);
+        }
+        
+        wrapper.appendChild(table);
+        
+        // Game logic functions (same as before)
+        function setMode(m) {
+            mode = m;
+            document.getElementById('btnFill').classList.toggle('active', m === 'fill');
+            document.getElementById('btnMark').classList.toggle('active', m === 'mark');
+        }
+        
+        function clickCell(r, c) {
+            if (isSolved) return;
+            
+            const cells = document.querySelectorAll('.cell');
+            const index = r * size + c;
+            const cell = cells[index];
+            
+            if (cell.classList.contains('locked')) return;
+            
+            if (mode === 'fill') {
+                if (userGrid[index] === 1) {
+                    userGrid[index] = 0;
+                    cell.classList.remove('filled');
+                    cell.textContent = '';
+                } else {
+                    userGrid[index] = 1;
+                    cell.classList.add('filled');
+                    cell.classList.remove('marked');
+                    cell.textContent = '';
+                }
+            } else {
+                if (userGrid[index] === 2) {
+                    userGrid[index] = 0;
+                    cell.classList.remove('marked');
+                    cell.textContent = '';
+                } else {
+                    userGrid[index] = 2;
+                    cell.classList.add('marked');
+                    cell.classList.remove('filled');
+                    cell.textContent = '✕';
+                }
+            }
+            
+            if (document.getElementById('message').textContent) {
+                document.getElementById('message').textContent = '';
+            }
+        }
+        
+        function checkSolution() {
+            if (isSolved) return;
+            
+            let errors = 0;
+            const cells = document.querySelectorAll('.cell');
+            
+            for (let i = 0; i < solFlat.length; i++) {
+                const cell = cells[i];
+                
+                if (cell.classList.contains('locked')) continue;
+                
+                if (solFlat[i] === 1 && userGrid[i] === 1) {
+                    cell.classList.add('correct', 'locked');
+                } else if (solFlat[i] === 0 && userGrid[i] !== 1) {
+                    userGrid[i] = 2;
+                    cell.classList.add('marked', 'locked');
+                    cell.textContent = '✕';
+                } else if (solFlat[i] === 1 && userGrid[i] !== 1) {
+                    errors++;
+                    cell.classList.add('wrong');
+                    setTimeout(() => cell.classList.remove('wrong'), 900);
+                } else if (solFlat[i] === 0 && userGrid[i] === 1) {
+                    errors++;
+                    cell.classList.add('wrong');
+                    setTimeout(() => cell.classList.remove('wrong'), 900);
+                }
+            }
+            
+            const msg = document.getElementById('message');
+            const nextLevelContainer = document.getElementById('nextLevelContainer');
+            
+            if (errors === 0) {
+                isSolved = true;
+                msg.textContent = '🎉 Congratulations! Puzzle solved! 🎉';
+                msg.style.color = '#27ae60';
+                nextLevelContainer.style.display = 'block';
+                document.body.style.animation = 'confetti 0.5s ease';
+                setTimeout(() => {
+                    document.body.style.animation = '';
+                }, 500);
+            } else {
+                msg.textContent = '❌ ' + errors + ' error(s) — keep going!';
+                msg.style.color = '#c0392b';
+                nextLevelContainer.style.display = 'none';
+            }
+        }
+        
+        function clearGrid() {
+            if (isSolved) return;
+            
+            userGrid.fill(0);
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach(cell => {
+                cell.className = 'cell';
+                cell.textContent = '';
+            });
+            document.getElementById('message').textContent = '';
+            document.getElementById('nextLevelContainer').style.display = 'none';
+            isSolved = false;
+        }
+        
+        // Attach event listeners
+        document.querySelectorAll('.cell').forEach((cell, idx) => {
+            const r = Math.floor(idx / size);
+            const c = idx % size;
+            cell.onclick = () => clickCell(r, c);
+        });
+        
+        document.getElementById('btnFill').onclick = () => setMode('fill');
+        document.getElementById('btnMark').onclick = () => setMode('mark');
+        document.getElementById('checkBtn').onclick = checkSolution;
+        document.getElementById('clearBtn').onclick = clearGrid;
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'f' || e.key === 'F') {
+                setMode('fill');
+                e.preventDefault();
+            } else if (e.key === 'm' || e.key === 'M') {
+                setMode('mark');
+                e.preventDefault();
+            } else if (e.key === 'Enter') {
+                checkSolution();
+                e.preventDefault();
+            } else if (e.key === 'c' || e.key === 'C') {
+                clearGrid();
+                e.preventDefault();
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
