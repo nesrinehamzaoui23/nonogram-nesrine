@@ -1,0 +1,14 @@
+# Maven build
+target/
+
+# Java compiled files
+*.class
+
+# Eclipse files
+.classpath
+.project
+.settings/
+
+# IntelliJ (si jamais)
+.idea/
+*.iml
