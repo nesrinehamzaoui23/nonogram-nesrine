@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nonogram - Accueil</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --purple:     #7b2cbf;
+            --purple-dark:#5a189a;
+            --purple-deep:#3c096c;
+            --purple-light:#9d4edd;
+            --purple-glow: #c77dff;
+            --bg:         #10002b;
+            --card-bg:    rgba(123, 44, 191, 0.12);
+            --text:       #e0aaff;
+            --white:      #ffffff;
+            --pixel-size: 6px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── Fond animé avec grille ── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(123,44,191,0.08) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(123,44,191,0.08) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ── Lumières d'ambiance ── */
+        .glow-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .glow-orb-1 {
+            width: 400px; height: 400px;
+            background: rgba(123,44,191,0.25);
+            top: -100px; left: -100px;
+            animation: floatOrb 8s ease-in-out infinite;
+        }
+        .glow-orb-2 {
+            width: 300px; height: 300px;
+            background: rgba(199,125,255,0.15);
+            bottom: -80px; right: -80px;
+            animation: floatOrb 10s ease-in-out infinite reverse;
+        }
+        @keyframes floatOrb {
+            0%, 100% { transform: translate(0, 0); }
+            50%       { transform: translate(30px, 30px); }
+        }
+
+        /* ── Wrapper ── */
+        .wrapper {
+            position: relative;
+            z-index: 1;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        /* ── NAVBAR ── */
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 2rem;
+            background: rgba(16, 0, 43, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(123,44,191,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Logo puzzle pixelisé SVG */
+        .pixel-logo {
+            width: 40px;
+            height: 40px;
+            image-rendering: pixelated;
+        }
+
+        .nav-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.85rem;
+            color: var(--purple-glow);
+            letter-spacing: 2px;
+            text-shadow: 0 0 15px var(--purple);
+        }
+
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .nav-user span {
+            font-size: 0.9rem;
+            color: var(--purple-glow);
+            font-weight: 600;
+        }
+
+        .btn-logout {
+            padding: 0.4rem 1rem;
+            background: transparent;
+            border: 1px solid var(--purple-light);
+            color: var(--purple-glow);
+            border-radius: 6px;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .btn-logout:hover {
+            background: var(--purple);
+            color: white;
+        }
+
+        /* ── HERO ── */
+        .hero {
+            text-align: center;
+            padding: 4rem 1rem 2rem;
+            animation: fadeSlideDown 0.7s ease both;
+        }
+        @keyframes fadeSlideDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .hero-greeting {
+            font-family: 'Press Start 2P', monospace;
+            font-size: clamp(0.8rem, 2vw, 1.1rem);
+            color: var(--purple-light);
+            letter-spacing: 3px;
+            margin-bottom: 0.8rem;
+        }
+
+        .hero-name {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 700;
+            color: var(--white);
+            margin-bottom: 0.5rem;
+            text-shadow: 0 0 30px rgba(199,125,255,0.4);
+        }
+        .hero-name span {
+            color: var(--purple-glow);
+        }
+
+        .hero-sub {
+            font-size: 1rem;
+            color: var(--text);
+            opacity: 0.7;
+            margin-bottom: 2.5rem;
+        }
+
+        /* ── STATS ── */
+        .stats-bar {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 3rem;
+            animation: fadeSlideDown 0.7s 0.1s ease both;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(123,44,191,0.35);
+            border-radius: 12px;
+            padding: 1.2rem 2rem;
+            min-width: 160px;
+            text-align: center;
+            backdrop-filter: blur(8px);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--purple-light);
+        }
+
+        .stat-value {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 1.5rem;
+            color: var(--purple-glow);
+            display: block;
+            margin-bottom: 0.4rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text);
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* ── SECTION TITRE ── */
+        .section-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.75rem;
+            color: var(--purple-light);
+            letter-spacing: 3px;
+            text-align: center;
+            margin-bottom: 2rem;
+            opacity: 0.8;
+        }
+
+        /* ── CARTES DE NIVEAUX ── */
+        .levels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            animation: fadeSlideDown 0.7s 0.2s ease both;
+        }
+
+        .level-card {
+            background: var(--card-bg);
+            border: 1px solid rgba(123,44,191,0.35);
+            border-radius: 16px;
+            padding: 2rem;
+            cursor: pointer;
+            transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+            position: relative;
+            overflow: hidden;
+            text-decoration: none;
+            display: block;
+        }
+
+        .level-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(123,44,191,0.15) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .level-card:hover::before { opacity: 1; }
+
+        .level-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 50px rgba(123,44,191,0.35);
+            border-color: var(--purple-light);
+        }
+
+        /* Couleurs des badges de niveau */
+        .level-card.facile  { --accent: #56cfe1; }
+        .level-card.moyen   { --accent: #f4a261; }
+        .level-card.difficile { --accent: #e63946; }
+
+        .level-badge {
+            display: inline-block;
+            background: var(--accent);
+            color: var(--bg);
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.55rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            letter-spacing: 1px;
+            margin-bottom: 1.2rem;
+        }
+
+        /* Grille pixelisée décorative sur la carte */
+        .pixel-grid-deco {
+            float: right;
+            margin: -0.5rem -0.5rem 0.5rem 1rem;
+        }
+
+        .level-name {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 1rem;
+            color: var(--white);
+            margin-bottom: 0.8rem;
+            display: block;
+        }
+
+        .level-desc {
+            font-size: 0.85rem;
+            color: var(--text);
+            opacity: 0.7;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .level-info {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .level-tag {
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            padding: 0.2rem 0.6rem;
+            opacity: 0.85;
+        }
+
+        .btn-jouer {
+            display: block;
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--purple);
+            color: var(--white);
+            border: none;
+            border-radius: 8px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s;
+            text-align: center;
+            text-decoration: none;
+        }
+        .btn-jouer:hover {
+            background: var(--purple-light);
+            box-shadow: 0 0 20px rgba(157,78,221,0.5);
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            text-align: center;
+            margin-top: 4rem;
+            font-size: 0.75rem;
+            opacity: 0.3;
+            font-family: 'Press Start 2P', monospace;
+            letter-spacing: 2px;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            nav { padding: 0.8rem 1rem; }
+            .hero { padding: 2rem 0.5rem 1rem; }
+            .stat-card { min-width: 120px; padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Lumières d'ambiance -->
+<div class="glow-orb glow-orb-1"></div>
+<div class="glow-orb glow-orb-2"></div>
+
+<!-- ══ NAVBAR ══ -->
+<nav>
+    <div class="nav-logo">
+        <!-- Logo puzzle pixelisé -->
+        <svg class="pixel-logo" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
+            <!-- Pièce haut-gauche -->
+            <rect x="0" y="0" width="6" height="6" fill="#7b2cbf"/>
+            <rect x="1" y="1" width="4" height="4" fill="#9d4edd"/>
+            <rect x="2" y="2" width="2" height="2" fill="#c77dff"/>
+            <!-- Connecteur haut -->
+            <rect x="6" y="2" width="2" height="3" fill="#7b2cbf"/>
+            <rect x="7" y="2" width="1" height="2" fill="#9d4edd"/>
+            <!-- Pièce haut-droite -->
+            <rect x="8" y="0" width="8" height="6" fill="#5a189a"/>
+            <rect x="9" y="1" width="6" height="4" fill="#7b2cbf"/>
+            <rect x="10" y="2" width="4" height="2" fill="#9d4edd"/>
+            <!-- Connecteur gauche -->
+            <rect x="2" y="6" width="3" height="2" fill="#7b2cbf"/>
+            <rect x="2" y="7" width="2" height="1" fill="#9d4edd"/>
+            <!-- Pièce bas-gauche -->
+            <rect x="0" y="8" width="6" height="8" fill="#3c096c"/>
+            <rect x="1" y="9" width="4" height="6" fill="#5a189a"/>
+            <rect x="2" y="10" width="2" height="4" fill="#7b2cbf"/>
+            <!-- Connecteur bas -->
+            <rect x="6" y="11" width="2" height="3" fill="#5a189a"/>
+            <rect x="7" y="12" width="1" height="2" fill="#7b2cbf"/>
+            <!-- Pièce bas-droite -->
+            <rect x="8" y="8" width="8" height="8" fill="#7b2cbf"/>
+            <rect x="9" y="9" width="6" height="6" fill="#9d4edd"/>
+            <rect x="10" y="10" width="4" height="4" fill="#c77dff"/>
+            <rect x="11" y="11" width="2" height="2" fill="#e0aaff"/>
+        </svg>
+        <span class="nav-title">NONOGRAM</span>
+    </div>
+    <div class="nav-user">
+        <span>👤 <span th:text="${username}">Joueur</span></span>
+        <a href="/login" class="btn-logout">Déconnexion</a>
+    </div>
+</nav>
+
+<!-- ══ CONTENU PRINCIPAL ══ -->
+<div class="wrapper">
+
+    <!-- Hero -->
+    <div class="hero">
+        <p class="hero-greeting">✦ BIENVENUE ✦</p>
+        <h1 class="hero-name">Bonjour, <span th:text="${username}">Joueur</span> !</h1>
+        <p class="hero-sub">Prêt à résoudre des puzzles ? Choisis ton niveau et commence !</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+        <div class="stat-card">
+            <span class="stat-value" th:text="${scoreTotal}">0</span>
+            <span class="stat-label">⭐ Score Total</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" th:text="${puzzlesResolus}">0</span>
+            <span class="stat-label">🧩 Puzzles Résolus</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value">3</span>
+            <span class="stat-label">🎯 Niveaux Disponibles</span>
+        </div>
+    </div>
+
+    <!-- Section niveaux -->
+    <p class="section-title">— CHOISIR UN NIVEAU —</p>
+
+    <div class="levels-grid">
+
+        <!-- ── FACILE ── -->
+        <a href="/puzzles/FACILE" class="level-card facile">
+            <!-- Grille décorative pixelisée 5x5 -->
+            <svg class="pixel-grid-deco" width="55" height="55" viewBox="0 0 55 55">
+                <g fill="#56cfe1" opacity="0.25">
+                    <rect x="0"  y="0"  width="9" height="9"/>
+                    <rect x="12" y="0"  width="9" height="9"/>
+                    <rect x="24" y="0"  width="9" height="9"/>
+                    <rect x="36" y="0"  width="9" height="9"/>
+                    <rect x="48" y="0"  width="7" height="9"/>
+                    <rect x="0"  y="12" width="9" height="9"/>
+                    <rect x="24" y="12" width="9" height="9"/>
+                    <rect x="48" y="12" width="7" height="9"/>
+                    <rect x="0"  y="24" width="9" height="9"/>
+                    <rect x="12" y="24" width="9" height="9"/>
+                    <rect x="24" y="24" width="9" height="9"/>
+                    <rect x="36" y="24" width="9" height="9"/>
+                    <rect x="0"  y="36" width="9" height="9"/>
+                    <rect x="36" y="36" width="9" height="9"/>
+                    <rect x="0"  y="48" width="9" height="7"/>
+                    <rect x="12" y="48" width="9" height="7"/>
+                    <rect x="24" y="48" width="9" height="7"/>
+                    <rect x="36" y="48" width="9" height="7"/>
+                    <rect x="48" y="48" width="7" height="7"/>
+                </g>
+            </svg>
+
+            <span class="level-badge">FACILE</span>
+            <span class="level-name">Débutant</span>
+            <p class="level-desc">Grilles 5×5 simples. Parfait pour apprendre les règles du Nonogram sans pression.</p>
+            <div class="level-info">
+                <span class="level-tag">5 × 5</span>
+                <span class="level-tag">Erreurs illimitées</span>
+                <span class="level-tag">100 pts max</span>
+            </div>
+            <span class="btn-jouer">▶ JOUER</span>
+        </a>
+
+        <!-- ── MOYEN ── -->
+        <a href="/puzzles/MOYEN" class="level-card moyen">
+            <svg class="pixel-grid-deco" width="55" height="55" viewBox="0 0 55 55">
+                <g fill="#f4a261" opacity="0.25">
+                    <rect x="0"  y="0"  width="6" height="6"/>
+                    <rect x="8"  y="0"  width="6" height="6"/>
+                    <rect x="16" y="0"  width="6" height="6"/>
+                    <rect x="24" y="0"  width="6" height="6"/>
+                    <rect x="32" y="0"  width="6" height="6"/>
+                    <rect x="40" y="0"  width="6" height="6"/>
+                    <rect x="48" y="0"  width="7" height="6"/>
+                    <rect x="0"  y="8"  width="6" height="6"/>
+                    <rect x="16" y="8"  width="6" height="6"/>
+                    <rect x="32" y="8"  width="6" height="6"/>
+                    <rect x="48" y="8"  width="7" height="6"/>
+                    <rect x="0"  y="16" width="6" height="6"/>
+                    <rect x="8"  y="16" width="6" height="6"/>
+                    <rect x="16" y="16" width="6" height="6"/>
+                    <rect x="24" y="16" width="6" height="6"/>
+                    <rect x="32" y="16" width="6" height="6"/>
+                    <rect x="40" y="16" width="6" height="6"/>
+                    <rect x="48" y="16" width="7" height="6"/>
+                    <rect x="0"  y="24" width="6" height="6"/>
+                    <rect x="24" y="24" width="6" height="6"/>
+                    <rect x="48" y="24" width="7" height="6"/>
+                    <rect x="0"  y="32" width="6" height="6"/>
+                    <rect x="8"  y="32" width="6" height="6"/>
+                    <rect x="24" y="32" width="6" height="6"/>
+                    <rect x="32" y="32" width="6" height="6"/>
+                </g>
+            </svg>
+
+            <span class="level-badge">MOYEN</span>
+            <span class="level-name">Intermédiaire</span>
+            <p class="level-desc">Grilles 10×10 plus complexes. Les erreurs sont limitées, il faut réfléchir !</p>
+            <div class="level-info">
+                <span class="level-tag">10 × 10</span>
+                <span class="level-tag">5 erreurs max</span>
+                <span class="level-tag">300 pts max</span>
+            </div>
+            <span class="btn-jouer">▶ JOUER</span>
+        </a>
+
+        <!-- ── DIFFICILE ── -->
+        <a href="/puzzles/DIFFICILE" class="level-card difficile">
+            <svg class="pixel-grid-deco" width="55" height="55" viewBox="0 0 55 55">
+                <g fill="#e63946" opacity="0.25">
+                    <rect x="0"  y="0"  width="4" height="4"/>
+                    <rect x="6"  y="0"  width="4" height="4"/>
+                    <rect x="12" y="0"  width="4" height="4"/>
+                    <rect x="18" y="0"  width="4" height="4"/>
+                    <rect x="24" y="0"  width="4" height="4"/>
+                    <rect x="30" y="0"  width="4" height="4"/>
+                    <rect x="36" y="0"  width="4" height="4"/>
+                    <rect x="42" y="0"  width="4" height="4"/>
+                    <rect x="48" y="0"  width="4" height="4"/>
+                    <rect x="0"  y="6"  width="4" height="4"/>
+                    <rect x="18" y="6"  width="4" height="4"/>
+                    <rect x="36" y="6"  width="4" height="4"/>
+                    <rect x="0"  y="12" width="4" height="4"/>
+                    <rect x="6"  y="12" width="4" height="4"/>
+                    <rect x="12" y="12" width="4" height="4"/>
+                    <rect x="18" y="12" width="4" height="4"/>
+                    <rect x="24" y="12" width="4" height="4"/>
+                    <rect x="0"  y="18" width="4" height="4"/>
+                    <rect x="24" y="18" width="4" height="4"/>
+                    <rect x="48" y="18" width="4" height="4"/>
+                    <rect x="0"  y="24" width="4" height="4"/>
+                    <rect x="6"  y="24" width="4" height="4"/>
+                    <rect x="12" y="24" width="4" height="4"/>
+                    <rect x="18" y="24" width="4" height="4"/>
+                    <rect x="24" y="24" width="4" height="4"/>
+                    <rect x="30" y="24" width="4" height="4"/>
+                </g>
+            </svg>
+
+            <span class="level-badge">DIFFICILE</span>
+            <span class="level-name">Expert</span>
+            <p class="level-desc">Grilles 15×15 pour les vrais experts. Seulement 3 erreurs autorisées !</p>
+            <div class="level-info">
+                <span class="level-tag">15 × 15</span>
+                <span class="level-tag">3 erreurs max</span>
+                <span class="level-tag">600 pts max</span>
+            </div>
+            <span class="btn-jouer">▶ JOUER</span>
+        </a>
+
+    </div>
+
+    <footer>
+        <p>NONOGRAM © 2026 </p>
+    </footer>
+
+</div>
+
+</body>
+</html>
